@@ -1,0 +1,57 @@
+#include <iostream>
+#include <cstring>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 65432
+#define BUFFER_SIZE 1024
+
+int main() {
+    int client_fd;
+    struct sockaddr_in server_address;
+    char buffer[BUFFER_SIZE] = {0};
+
+    // 创建Socket文件描述符
+    if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("Socket创建失败");
+        return -1;
+    }
+
+    server_address.sin_family = AF_INET;
+    server_address.sin_port = htons(PORT);
+
+    // 转换IP地址
+    if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0) {
+        perror("无效的地址/地址不可用");
+        return -1;
+    }
+
+    // 连接服务器
+    if (connect(client_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+        perror("连接失败");
+        return -1;
+    }
+
+    std::cout << "已连接到服务器" << std::endl;
+
+    while (true) {
+        std::cout << "请输入消息: ";
+        std::string message;
+        std::getline(std::cin, message);
+
+        if (message == "exit") {
+            std::cout << "退出客户端" << std::endl;
+            break;
+        }
+
+        send(client_fd, message.c_str(), message.length(), 0);
+        memset(buffer, 0, BUFFER_SIZE);
+        int valread = read(client_fd, buffer, BUFFER_SIZE);
+        std::cout << "服务器回复: " << buffer << std::endl;
+    }
+
+    close(client_fd);
+
+    return 0;
+}
